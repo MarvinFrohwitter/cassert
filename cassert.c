@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define SIZE_MIN 0
 #define UINT8_MIN 0
@@ -23,6 +26,8 @@
 typedef enum {
   UNKNOWN,
   STRING_EQ,
+  STRING_NUMBER_EQ,
+  CHAR_NUMBER_EQ,
   PTR_EQ,
 
   CHAR_EQ,
@@ -128,6 +133,8 @@ int cassert_print_failure_case(Cassert cassert);
     return cassert;                                                            \
   } while (0);
 
+Cassert cassert_string_number_eq(const char *string, const double_t number);
+Cassert cassert_char_number_eq(const char c, const unsigned char number);
 
 Cassert cassert_char_eq(const char a, const char b);
 Cassert cassert_uchar_eq(const unsigned char a, const unsigned char b);
@@ -201,9 +208,38 @@ Cassert cassert_double_t_eq(const double_t a, const double_t b);
 Cassert cassert_string_eq(const char *a, const char *b) {
   Cassert cassert = {0};
   cassert.assert_type = STRING_EQ;
-  cassert.value1 = a;
-  cassert.value2 = b;
-  cassert.result = strcmp(a, b);
+  cassert.value1 = &a;
+  cassert.value2 = &b;
+  cassert.result = strncmp(a, b, fmin(strlen(a), strlen(b)));
+  if (cassert.result != 0) {
+    cassert.failed = true;
+  }
+  return cassert;
+}
+
+Cassert cassert_string_number_eq(const char *string, const double_t number) {
+  Cassert cassert = {0};
+  cassert.assert_type = STRING_NUMBER_EQ;
+  cassert.value1 = &string;
+  cassert.value2 = &number;
+  char number_string[64] = {0};
+  if (snprintf(number_string, sizeof(number_string), "%lf\n", number) < 0) {
+    exit(EXIT_FAILURE);
+  };
+  cassert.result = strncmp(string, number_string,
+                           fmin(strlen(string), strlen(number_string)));
+  if (cassert.result != 0) {
+    cassert.failed = true;
+  }
+  return cassert;
+}
+
+Cassert cassert_char_number_eq(const char c, const unsigned char number) {
+  Cassert cassert = {0};
+  cassert.assert_type = CHAR_NUMBER_EQ;
+  cassert.value1 = &c;
+  cassert.value2 = &number;
+  cassert.result = c + 48 == number ? 1 : 0;
   if (cassert.result != 0) {
     cassert.failed = true;
   }
@@ -213,8 +249,8 @@ Cassert cassert_string_eq(const char *a, const char *b) {
 Cassert cassert_ptr_eq(const void *a, const void *b) {
   Cassert cassert = {0};
   cassert.assert_type = PTR_EQ;
-  cassert.value1 = a;
-  cassert.value2 = b;
+  cassert.value1 = &a;
+  cassert.value2 = &b;
   cassert.result = a == b ? 1 : 0;
   if (!cassert.result) {
     cassert.failed = true;
