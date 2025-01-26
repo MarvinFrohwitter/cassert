@@ -1,31 +1,33 @@
-#include <stddef.h>
 #define CASSERT_IMPLEMENTATION
 #include "cassert.h"
 
-void test1(Casserts *casserts) {
+Test test1() {
+  Test test = {0};
+  test.name = "Test1";
+
   const char *a = __FILE__;
   const char *c = a;
-  // TODO Set the name of the test.
   cassert_ptr_eq(a, c);
+  return test;
 }
 
-void test2(Casserts *casserts) {
-  const char *a = __FILE__;
+Test test2() {
+  Test test = {0};
+  test.name = "Test2";
 
   cassert_string_eq("h", "H");
   cassert_string_int64_eq("5", 5.01);
   cassert_float_eq(2.3, 5.01);
+  return test;
 }
 
 int main(int argc, char *argv[]) {
-  Casserts casserts = {0};
-  cassert_cases() {
-    test1(&casserts);
-    test2(&casserts);
+  cassert_tests {
+    cassert_dap(&tests, test1());
+    cassert_dap(&tests, test2());
   }
 
-  printf("[TEST] Amount:%zu\n", casserts.count);
-  cassert_print_all_cases(&casserts);
-  cassert_array_free_case_value_mem(&casserts);
+  cassert_print_tests(&tests);
+  cassert_free_tests(&tests);
   return 0;
 }

@@ -11,6 +11,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+#define TERM_OK "  \033[32mOK\033[0m  "
+#define TERM_FAIL " \033[31mFAIL\033[0m "
+#define TERM_NAME " \033[34mNAME\033[0m "
+#define TERM_AMOUNT "\033[34mAMOUNT\033[0m"
+
+#define OK "  OK  "
+#define FAIL " FAIL "
+#define NAME " NAME "
+#define AMOUNT "AMOUNT"
 
 #define SIZE_MIN 0
 #define UINT8_MIN 0
@@ -126,7 +137,14 @@ typedef struct {
   Cassert *elements;
   size_t count;
   size_t capacity;
-} Casserts;
+  const char *name;
+} Test;
+
+typedef struct {
+  Test *elements;
+  size_t count;
+  size_t capacity;
+} Tests;
 
 typedef struct {
   char *elements;
@@ -206,14 +224,17 @@ typedef struct {
     }                                                                          \
   } while (0)
 
-#define cassert_cases()
+#define cassert_tests Tests tests = {0};
 // The free functions are just needed if xou want to clean up every used memory
-// and it is also just needed if some cassert_functions are called. Here are the
-// Assert_Types that involve heap allocation:
-// DOUBLE_EQ: DOUBLE_T_EQ: FLOAT_EQ:
-// FLOAT_T_EQ: STRING_INT64_EQ: STRING_FLOAT_EQ: STRING_DOUBLE_EQ:
+// and it is also just needed if some cassert_functions are called and you
+// provide a custom comparison function to the cassert_type_compare_function
+// macro. Here are the Assert_Types that involve heap allocation:
+// DOUBLE_EQ: DOUBLE_T_EQ: FLOAT_EQ: FLOAT_T_EQ:
+// STRING_INT64_EQ: STRING_FLOAT_EQ: STRING_DOUBLE_EQ:
 void cassert_free_case_value_mem(Cassert *cassert);
-void cassert_array_free_case_value_mem(Casserts *casserts);
+void cassert_array_free_case_value_mem(Test *test);
+void cassert_free_test(Test *test);
+void cassert_free_tests(Tests *tests);
 
 int cassert_min(int a, int b);
 const char *cassert_str_assert_type(Assert_Type assert_type);
@@ -221,46 +242,29 @@ const char *cassert_str_assert_type(Assert_Type assert_type);
 int cassert_print(Cassert cassert);
 int cassert_print_failure_case(Cassert cassert);
 int cassert_print_success_case(Cassert cassert);
-int cassert_print_all_cases(Casserts *casserts);
-int cassert_print_all_failure_cases(Casserts *casserts);
-int cassert_print_all_success_cases(Casserts *casserts);
+int cassert_print_all_cases(Test *test);
+int cassert_print_all_failure_cases(Test *test);
+int cassert_print_all_success_cases(Test *test);
+void cassert_print_test(Test *test);
+void cassert_print_tests(Tests *tests);
 
-#define cassert_type_double_compare(type, a, compare, b)                       \
+#define cassert_type_compare_function(type, a, compare_function, b)            \
   do {                                                                         \
     Cassert cassert = {0};                                                     \
     cassert.line = __LINE__;                                                   \
     cassert.file = __FILE__;                                                   \
     cassert.assert_type = type;                                                \
-    cassert.value1 = malloc(sizeof(typeof(a)));                                \
-    cassert.value2 = malloc(sizeof(typeof(b)));                                \
+    cassert.value1 = malloc(sizeof(typeof((a))));                              \
+    cassert.value2 = malloc(sizeof(typeof((b))));                              \
     assert(cassert.value1 != NULL);                                            \
     assert(cassert.value2 != NULL);                                            \
-    *(double_t *)cassert.value1 = a;                                           \
-    *(double_t *)cassert.value2 = b;                                           \
-    cassert.result = a compare b ? 1 : 0;                                      \
+    *(typeof((a)) *)cassert.value1 = (a);                                      \
+    *(typeof((b)) *)cassert.value2 = (b);                                      \
+    cassert.result = compare_function((a), (b));                               \
     if (!cassert.result) {                                                     \
       cassert.failed = true;                                                   \
     }                                                                          \
-    cassert_dap(casserts, cassert);                                            \
-  } while (0)
-
-#define cassert_type_float_compare(type, a, compare, b)                        \
-  do {                                                                         \
-    Cassert cassert = {0};                                                     \
-    cassert.line = __LINE__;                                                   \
-    cassert.file = __FILE__;                                                   \
-    cassert.assert_type = type;                                                \
-    cassert.value1 = malloc(sizeof(typeof(a)));                                \
-    cassert.value2 = malloc(sizeof(typeof(b)));                                \
-    assert(cassert.value1 != NULL);                                            \
-    assert(cassert.value2 != NULL);                                            \
-    *(float_t *)cassert.value1 = a;                                            \
-    *(float_t *)cassert.value2 = b;                                            \
-    cassert.result = a compare b ? 1 : 0;                                      \
-    if (!cassert.result) {                                                     \
-      cassert.failed = true;                                                   \
-    }                                                                          \
-    cassert_dap(casserts, cassert);                                            \
+    cassert_dap(&test, cassert);                                               \
   } while (0)
 
 #define cassert_type_compare(type, a, compare, b)                              \
@@ -269,16 +273,35 @@ int cassert_print_all_success_cases(Casserts *casserts);
     cassert.line = __LINE__;                                                   \
     cassert.file = __FILE__;                                                   \
     cassert.assert_type = type;                                                \
-    cassert.value1 = (void *)a;                                                \
-    cassert.value2 = (void *)b;                                                \
-    cassert.result = a compare b ? 1 : 0;                                      \
+    cassert.value1 = (void *)(a);                                              \
+    cassert.value2 = (void *)(b);                                              \
+    cassert.result = (a)compare(b) ? 1 : 0;                                    \
     if (!cassert.result) {                                                     \
       cassert.failed = true;                                                   \
     }                                                                          \
-    cassert_dap(casserts, cassert);                                            \
+    cassert_dap(&test, cassert);                                               \
   } while (0)
 
-#define cassert_eq(a, compare, b) cassert_type_compare(ANY_EQ, a, compare, b)
+#define cassert_eq(a, compare, b)                                              \
+  cassert_type_compare(ANY_EQ, (a), compare, (b))
+
+#ifndef eps
+#define eps 0.01
+#endif // !epsilon
+
+static inline bool float_equals(float_t x, float_t y) {
+  return (fabsf(x - y)) <= (eps * fmaxf(1.0f, fmaxf(fabsf(x), fabsf(y))));
+}
+static inline bool double_equals(double_t x, double_t y) {
+  return (fabs(x - y)) <= (eps * fmax(1.0f, fmax(fabs(x), fabs(y))));
+}
+
+#define cassert_type_float_compare(type, a, compare, b)                        \
+  cassert_type_compare_function(type, ((float_t)(a)), float_equals,            \
+                                ((float_t)(b)))
+
+#define cassert_type_double_compare(type, a, compare, b)                       \
+  cassert_type_compare_function(type, (a), double_equals, (b))
 
 #define cassert_string_eq(a, b)                                                \
   do {                                                                         \
@@ -286,15 +309,15 @@ int cassert_print_all_success_cases(Casserts *casserts);
     cassert.assert_type = STRING_EQ;                                           \
     cassert.file = __FILE__;                                                   \
     cassert.line = __LINE__;                                                   \
-    cassert.value1 = (void *)a;                                                \
-    cassert.value2 = (void *)b;                                                \
+    cassert.value1 = (void *)(a);                                              \
+    cassert.value2 = (void *)(b);                                              \
     assert(cassert.value1 != NULL);                                            \
     assert(cassert.value2 != NULL);                                            \
     cassert.result = strncmp(a, b, cassert_min(strlen(a), strlen(b)));         \
     if (cassert.result != 0) {                                                 \
       cassert.failed = true;                                                   \
     }                                                                          \
-    cassert_dap(casserts, cassert);                                            \
+    cassert_dap(&test, cassert);                                               \
   } while (0)
 
 #define cassert_char_number_eq(c, number)                                      \
@@ -319,26 +342,26 @@ enum { _float, _double, _int64 };
     char number_string[64] = {0};                                              \
     switch (type) {                                                            \
     case _int64:                                                               \
-      *(int64_t *)cassert.value2 = (int64_t)number;                            \
+      *(int64_t *)cassert.value2 = (int64_t)(number);                          \
       cassert.assert_type = STRING_INT64_EQ;                                   \
       if (snprintf(number_string, sizeof(number_string), "%ld\n",              \
-                   (int64_t)number) < 0) {                                     \
+                   (int64_t)(number)) < 0) {                                   \
         exit(EXIT_FAILURE);                                                    \
       };                                                                       \
       break;                                                                   \
     case _float:                                                               \
-      *(float_t *)cassert.value2 = (float_t)number;                            \
+      *(float_t *)cassert.value2 = (float_t)(number);                          \
       cassert.assert_type = STRING_FLOAT_EQ;                                   \
       if (snprintf(number_string, sizeof(number_string), "%f\n",               \
-                   (float_t)number) < 0) {                                     \
+                   (float_t)(number)) < 0) {                                   \
         exit(EXIT_FAILURE);                                                    \
       };                                                                       \
       break;                                                                   \
     case _double:                                                              \
-      *(double_t *)cassert.value2 = (double_t)number;                          \
+      *(double_t *)cassert.value2 = (double_t)(number);                        \
       cassert.assert_type = STRING_DOUBLE_EQ;                                  \
       if (snprintf(number_string, sizeof(number_string), "%lf\n",              \
-                   (double_t)number) < 0) {                                    \
+                   (double_t)(number)) < 0) {                                  \
         exit(EXIT_FAILURE);                                                    \
       };                                                                       \
       break;                                                                   \
@@ -351,9 +374,8 @@ enum { _float, _double, _int64 };
     if (cassert.result != 0) {                                                 \
       cassert.failed = true;                                                   \
     }                                                                          \
-    cassert_dap(casserts, cassert);                                            \
+    cassert_dap(&test, cassert);                                               \
   } while (0)
-
 
 #define cassert_ptr_eq(a, b) cassert_type_compare(PTR_EQ, a, ==, b);
 
@@ -681,13 +703,7 @@ int cassert_fprintf(FILE *stream, const char *status, const char *fmt, ...) {
   DA_CHARPTR c = {0};
   if (status != NULL) {
     cassert_dap(&c, '[');
-    if (strncmp(status, "OK", 2) == 0) {
-      cassert_dap(&c, ' ');
-      cassert_dapc(&c, status, strlen(status));
-      cassert_dap(&c, ' ');
-    } else {
-      cassert_dapc(&c, status, strlen(status));
-    }
+    cassert_dapc(&c, status, strlen(status));
     cassert_dap(&c, ']');
     cassert_dap(&c, ' ');
   }
@@ -702,7 +718,14 @@ int cassert_fprintf(FILE *stream, const char *status, const char *fmt, ...) {
   free(c.elements);
   return ret;
 }
-const char *booltostr(bool value) { return value ? "OK" : "FAIL"; }
+
+const char *booltostr(bool value) {
+  if (isatty(STDERR_FILENO)) {
+    return value ? TERM_OK : TERM_FAIL;
+  } else {
+    return value ? OK : FAIL;
+  }
+}
 
 #define LOC_FMT " %s:%d"
 #define LOC_ARG(arg) (arg).file, (arg).line
@@ -721,9 +744,15 @@ int cassert_print(Cassert cassert) {
                            (char *)cassert.value2, LOC_ARG(cassert));
   case FLOAT_EQ:
     return cassert_fprintf(stderr, booltostr(!cassert.failed),
-                           "%f:%s:%f ->" LOC_FMT, *((float *)cassert.value1),
+                           "%f:%s:%f ->" LOC_FMT, *((float_t *)cassert.value1),
                            cassert_str_assert_type(cassert.assert_type),
                            *((float_t *)cassert.value2), LOC_ARG(cassert));
+  case INT_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%d:%s:%d ->" LOC_FMT, (int64_t *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           (int64_t *)cassert.value2, LOC_ARG(cassert));
+
   case STRING_INT64_EQ:
     return cassert_fprintf(stderr, booltostr(!cassert.failed),
                            "%s:%s:%ld ->" LOC_FMT, (char *)cassert.value1,
@@ -766,34 +795,51 @@ int cassert_print_success_case(Cassert cassert) {
   return 0;
 }
 
-int cassert_print_all_cases(Casserts *casserts) {
+int cassert_print_all_cases(Test *test) {
   int result = 0;
-  for (size_t c = 0; c < casserts->count; ++c) {
-    if (cassert_print(casserts->elements[c]) < 0) {
+  for (size_t c = 0; c < test->count; ++c) {
+    if (cassert_print(test->elements[c]) < 0) {
       result = -1;
     }
   }
   return result;
 }
 
-int cassert_print_all_failure_cases(Casserts *casserts) {
+int cassert_print_all_failure_cases(Test *test) {
   int result = 0;
-  for (size_t c = 0; c < casserts->count; ++c) {
-    if (cassert_print_failure_case(casserts->elements[c]) < 0) {
+  for (size_t c = 0; c < test->count; ++c) {
+    if (cassert_print_failure_case(test->elements[c]) < 0) {
       result = -1;
     }
   }
   return result;
 }
 
-int cassert_print_all_success_cases(Casserts *casserts) {
+int cassert_print_all_success_cases(Test *test) {
   int result = 0;
-  for (size_t c = 0; c < casserts->count; ++c) {
-    if (cassert_print_success_case(casserts->elements[c]) < 0) {
+  for (size_t c = 0; c < test->count; ++c) {
+    if (cassert_print_success_case(test->elements[c]) < 0) {
       result = -1;
     }
   }
   return result;
+}
+
+void cassert_print_test(Test *test) {
+  if (isatty(STDERR_FILENO)) {
+    cassert_fprintf(stderr, TERM_NAME, "%s", test->name);
+    cassert_fprintf(stderr, TERM_AMOUNT, "%zu", test->count);
+  } else {
+    cassert_fprintf(stderr, NAME, "%s", test->name);
+    cassert_fprintf(stderr, AMOUNT, "%zu", test->count);
+  }
+  cassert_print_all_cases(test);
+}
+
+void cassert_print_tests(Tests *tests) {
+  for (size_t i = 0; i < tests->count; ++i) {
+    cassert_print_test(&tests->elements[i]);
+  }
 }
 
 void cassert_free_case_value_mem(Cassert *cassert) {
@@ -804,6 +850,9 @@ void cassert_free_case_value_mem(Cassert *cassert) {
   case FLOAT_T_EQ: {
     if (cassert->value1) {
       free(cassert->value1);
+    }
+    if (cassert->value2) {
+      free(cassert->value2);
     }
   } break;
   case STRING_INT64_EQ:
@@ -818,10 +867,22 @@ void cassert_free_case_value_mem(Cassert *cassert) {
   }
 }
 
-void cassert_array_free_case_value_mem(Casserts *casserts) {
-  for (size_t i = 0; i < casserts->count; ++i) {
-    cassert_free_case_value_mem(&casserts->elements[i]);
+void cassert_array_free_case_value_mem(Test *test) {
+  for (size_t i = 0; i < test->count; ++i) {
+    cassert_free_case_value_mem(&test->elements[i]);
   }
+}
+
+void cassert_free_test(Test *test) {
+  cassert_array_free_case_value_mem(test);
+  free(test->elements);
+}
+
+void cassert_free_tests(Tests *tests) {
+  for (size_t i = 0; i < tests->count; ++i) {
+    cassert_free_test(&tests->elements[i]);
+  }
+  free(tests->elements);
 }
 
 #endif // CASSERT_IMPLEMENTATION
