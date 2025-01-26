@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,7 +28,9 @@ typedef enum {
   UNKNOWN_EQ,
   ANY_EQ,
   STRING_EQ,
-  STRING_NUMBER_EQ,
+  STRING_INT64_EQ,
+  STRING_FLOAT_EQ,
+  STRING_DOUBLE_EQ,
   CHAR_NUMBER_EQ,
   PTR_EQ,
 
@@ -38,6 +41,8 @@ typedef enum {
   INT_EQ,
   LONG_EQ,
   LONG_LONG_EQ,
+  FLOAT_EQ,
+  DOUBLE_EQ,
 
   USHORT_EQ,
   UINT_EQ,
@@ -111,8 +116,8 @@ typedef struct {
   Assert_Type assert_type;
   bool failed;
   int result;
-  const void *value1;
-  const void *value2;
+  void *value1;
+  void *value2;
   size_t line;
   const char *file;
 } Cassert;
@@ -122,6 +127,12 @@ typedef struct {
   size_t count;
   size_t capacity;
 } Casserts;
+
+typedef struct {
+  char *elements;
+  size_t count;
+  size_t capacity;
+} DA_CHARPTR;
 
 /** @brief The initial capacity of the dynamic arrays. */
 #define CASSERT_DAP_CAP 64
@@ -195,8 +206,16 @@ typedef struct {
     }                                                                          \
   } while (0)
 
-Cassert cassert_string_eq(const char *a, const char *b);
-Cassert cassert_ptr_eq(const void *a, const void *b);
+#define cassert_cases()
+// The free functions are just needed if xou want to clean up every used memory
+// and it is also just needed if some cassert_functions are called. Here are the
+// Assert_Types that involve heap allocation:
+// DOUBLE_EQ: DOUBLE_T_EQ: FLOAT_EQ:
+// FLOAT_T_EQ: STRING_INT64_EQ: STRING_FLOAT_EQ: STRING_DOUBLE_EQ:
+void cassert_free_case_value_mem(Cassert *cassert);
+void cassert_array_free_case_value_mem(Casserts *casserts);
+
+int cassert_min(int a, int b);
 const char *cassert_str_assert_type(Assert_Type assert_type);
 
 int cassert_print(Cassert cassert);
@@ -206,81 +225,134 @@ int cassert_print_all_cases(Casserts *casserts);
 int cassert_print_all_failure_cases(Casserts *casserts);
 int cassert_print_all_success_cases(Casserts *casserts);
 
-#define cassert_eq(cassert, a, compare, b)                                     \
+#define cassert_type_double_compare(type, a, compare, b)                       \
   do {                                                                         \
-    cassert.line = __LINE__ - 1; /* The offset this next line. */              \
+    Cassert cassert = {0};                                                     \
+    cassert.line = __LINE__;                                                   \
     cassert.file = __FILE__;                                                   \
-    cassert.assert_type = ANY_EQ;                                              \
-    cassert.value1 = &a;                                                       \
-    cassert.value2 = &b;                                                       \
+    cassert.assert_type = type;                                                \
+    cassert.value1 = malloc(sizeof(typeof(a)));                                \
+    cassert.value2 = malloc(sizeof(typeof(b)));                                \
+    assert(cassert.value1 != NULL);                                            \
+    assert(cassert.value2 != NULL);                                            \
+    *(double_t *)cassert.value1 = a;                                           \
+    *(double_t *)cassert.value2 = b;                                           \
     cassert.result = a compare b ? 1 : 0;                                      \
     if (!cassert.result) {                                                     \
       cassert.failed = true;                                                   \
     }                                                                          \
+    cassert_dap(casserts, cassert);                                            \
   } while (0)
 
-Cassert cassert_string_number_eq(const char *string, const double_t number);
-Cassert cassert_char_number_eq(const char c, const unsigned char number);
+#define cassert_type_float_compare(type, a, compare, b)                        \
+  do {                                                                         \
+    Cassert cassert = {0};                                                     \
+    cassert.line = __LINE__;                                                   \
+    cassert.file = __FILE__;                                                   \
+    cassert.assert_type = type;                                                \
+    cassert.value1 = malloc(sizeof(typeof(a)));                                \
+    cassert.value2 = malloc(sizeof(typeof(b)));                                \
+    assert(cassert.value1 != NULL);                                            \
+    assert(cassert.value2 != NULL);                                            \
+    *(float_t *)cassert.value1 = a;                                            \
+    *(float_t *)cassert.value2 = b;                                            \
+    cassert.result = a compare b ? 1 : 0;                                      \
+    if (!cassert.result) {                                                     \
+      cassert.failed = true;                                                   \
+    }                                                                          \
+    cassert_dap(casserts, cassert);                                            \
+  } while (0)
 
-Cassert cassert_char_eq(const char a, const char b);
-Cassert cassert_uchar_eq(const unsigned char a, const unsigned char b);
+#define cassert_type_compare(type, a, compare, b)                              \
+  do {                                                                         \
+    Cassert cassert = {0};                                                     \
+    cassert.line = __LINE__;                                                   \
+    cassert.file = __FILE__;                                                   \
+    cassert.assert_type = type;                                                \
+    cassert.value1 = (void *)a;                                                \
+    cassert.value2 = (void *)b;                                                \
+    cassert.result = a compare b ? 1 : 0;                                      \
+    if (!cassert.result) {                                                     \
+      cassert.failed = true;                                                   \
+    }                                                                          \
+    cassert_dap(casserts, cassert);                                            \
+  } while (0)
 
-Cassert cassert_short_eq(const short a, const short b);
-Cassert cassert_int_eq(const int a, const int b);
-Cassert cassert_long_eq(const long a, const long b);
-Cassert cassert_long_long_eq(const long long a, const long long b);
-Cassert cassert_ushort_eq(const unsigned short a, const unsigned short b);
-Cassert cassert_uint_eq(const unsigned int a, const unsigned int b);
-Cassert cassert_ulong_eq(const unsigned long a, const unsigned long b);
-Cassert cassert_ulong_long_eq(const unsigned long long a,
-                              const unsigned long long b);
+#define cassert_eq(a, compare, b) cassert_type_compare(ANY_EQ, a, compare, b)
 
-Cassert cassert_char_max_eq(const char a);
-Cassert cassert_short_max_eq(const short a);
-Cassert cassert_int_max_eq(const int a);
-Cassert cassert_long_max_eq(const long a);
-Cassert cassert_long_long_max_eq(const long long a);
+#define cassert_string_eq(a, b)                                                \
+  do {                                                                         \
+    Cassert cassert = {0};                                                     \
+    cassert.assert_type = STRING_EQ;                                           \
+    cassert.file = __FILE__;                                                   \
+    cassert.line = __LINE__;                                                   \
+    cassert.value1 = (void *)a;                                                \
+    cassert.value2 = (void *)b;                                                \
+    assert(cassert.value1 != NULL);                                            \
+    assert(cassert.value2 != NULL);                                            \
+    cassert.result = strncmp(a, b, cassert_min(strlen(a), strlen(b)));         \
+    if (cassert.result != 0) {                                                 \
+      cassert.failed = true;                                                   \
+    }                                                                          \
+    cassert_dap(casserts, cassert);                                            \
+  } while (0)
 
-Cassert cassert_uchar_max_eq(const unsigned char a);
-Cassert cassert_ushort_max_eq(const unsigned short a);
-Cassert cassert_unit_max_eq(const unsigned int a);
-Cassert cassert_ulong_max_eq(const unsigned long a);
-Cassert cassert_ulong_long_max_eq(const unsigned long long a);
+#define cassert_char_number_eq(c, number)                                      \
+  cassert_type_compare(CHAR_NUMBER_EQ, c, +48 ==, number);
 
-Cassert cassert_size_t_max_eq(const size_t a);
-Cassert cassert_size_t_min_eq(const size_t a);
+enum { _float, _double, _int64 };
+#define cassert_string_int64_eq(string, number)                                \
+  cassert_type_string_number_eq(string, number, _int64)
+#define cassert_string_float_eq(string, number)                                \
+  cassert_type_string_number_eq(string, number, _float)
+#define cassert_string_double_eq(string, number)                               \
+  cassert_type_string_number_eq(string, number, _double)
 
-Cassert cassert_int8_t_max_eq(const int8_t a);
-Cassert cassert_int16_t_max_eq(const int16_t a);
-Cassert cassert_int32_t_max_eq(const int32_t a);
-Cassert cassert_int64_t_max_eq(const int64_t a);
-
-Cassert cassert_uint8_t_max_eq(const uint8_t a);
-Cassert cassert_uint16_t_max_eq(const uint16_t a);
-Cassert cassert_uint32_t_max_eq(const uint32_t a);
-Cassert cassert_uint64_t_max_eq(const uint64_t a);
-
-Cassert cassert_int8_t_min_eq(const int8_t a);
-Cassert cassert_int16_t_min_eq(const int16_t a);
-Cassert cassert_int32_t_min_eq(const int32_t a);
-Cassert cassert_int64_t_min_eq(const int64_t a);
-
-Cassert cassert_uint8_t_min_eq(const uint8_t a);
-Cassert cassert_uint16_t_min_eq(const uint16_t a);
-Cassert cassert_uint32_t_min_eq(const uint32_t a);
-Cassert cassert_uint64_t_min_eq(const uint64_t a);
-
-Cassert cassert_size_t_eq(const size_t a, const size_t b);
-Cassert cassert_int8_t_eq(const int8_t a, const int8_t b);
-Cassert cassert_int16_t_eq(const int16_t a, const int16_t b);
-Cassert cassert_int32_t_eq(const int32_t a, const int32_t b);
-Cassert cassert_int64_t_eq(const int64_t a, const int64_t b);
-Cassert cassert_uint8_t_eq(const uint8_t a, const uint8_t b);
-Cassert cassert_uint16_t_eq(const uint16_t a, const uint16_t b);
-Cassert cassert_uint32_t_eq(const uint32_t a, const uint32_t b);
-Cassert cassert_uint64_t_eq(const uint64_t a, const uint64_t b);
-Cassert cassert_float_t_eq(const float_t a, const float_t b);
-Cassert cassert_double_t_eq(const double_t a, const double_t b);
+#define cassert_type_string_number_eq(string, number, type)                    \
+  do {                                                                         \
+    Cassert cassert = {0};                                                     \
+    cassert.file = __FILE__;                                                   \
+    cassert.line = __LINE__;                                                   \
+    cassert.value1 = (void *)string;                                           \
+    cassert.value2 = malloc(sizeof(typeof(number)));                           \
+    assert(cassert.value2 != NULL);                                            \
+    char number_string[64] = {0};                                              \
+    switch (type) {                                                            \
+    case _int64:                                                               \
+      *(int64_t *)cassert.value2 = (int64_t)number;                            \
+      cassert.assert_type = STRING_INT64_EQ;                                   \
+      if (snprintf(number_string, sizeof(number_string), "%ld\n",              \
+                   (int64_t)number) < 0) {                                     \
+        exit(EXIT_FAILURE);                                                    \
+      };                                                                       \
+      break;                                                                   \
+    case _float:                                                               \
+      *(float_t *)cassert.value2 = (float_t)number;                            \
+      cassert.assert_type = STRING_FLOAT_EQ;                                   \
+      if (snprintf(number_string, sizeof(number_string), "%f\n",               \
+                   (float_t)number) < 0) {                                     \
+        exit(EXIT_FAILURE);                                                    \
+      };                                                                       \
+      break;                                                                   \
+    case _double:                                                              \
+      *(double_t *)cassert.value2 = (double_t)number;                          \
+      cassert.assert_type = STRING_DOUBLE_EQ;                                  \
+      if (snprintf(number_string, sizeof(number_string), "%lf\n",              \
+                   (double_t)number) < 0) {                                    \
+        exit(EXIT_FAILURE);                                                    \
+      };                                                                       \
+      break;                                                                   \
+    default:                                                                   \
+      exit(EXIT_FAILURE);                                                      \
+    }                                                                          \
+    cassert.result =                                                           \
+        strncmp(string, number_string,                                         \
+                cassert_min(strlen(string), strlen(number_string)));           \
+    if (cassert.result != 0) {                                                 \
+      cassert.failed = true;                                                   \
+    }                                                                          \
+    cassert_dap(casserts, cassert);                                            \
+  } while (0)
 
 #endif // CASSERT_H_
 
@@ -293,727 +365,181 @@ Cassert cassert_double_t_eq(const double_t a, const double_t b);
 
 int cassert_min(int a, int b) { return a < b ? a : b; }
 
-Cassert cassert_string_eq(const char *a, const char *b) {
-  Cassert cassert = {0};
-  cassert.assert_type = STRING_EQ;
-  cassert.value1 = a;
-  cassert.value2 = b;
-  cassert.result = strncmp(a, b, cassert_min(strlen(a), strlen(b)));
-  if (cassert.result != 0) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ptr_eq(a, b) cassert_type_compare(PTR_EQ, a, ==, b);
 
-Cassert cassert_string_number_eq(const char *string, const double_t number) {
-  Cassert cassert = {0};
-  cassert.assert_type = STRING_NUMBER_EQ;
-  cassert.value1 = string;
-  cassert.value2 = &number;
-  char number_string[64] = {0};
-  if (snprintf(number_string, sizeof(number_string), "%lf\n", number) < 0) {
-    exit(EXIT_FAILURE);
-  };
-  cassert.result = strncmp(string, number_string,
-                           cassert_min(strlen(string), strlen(number_string)));
-  if (cassert.result != 0) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_size_t_max_eq(a)                                               \
+  cassert_type_compare(SIZE_T_MAX_EQ, a, ==, SIZE_MAX);
 
-Cassert cassert_char_number_eq(const char c, const unsigned char number) {
-  Cassert cassert = {0};
-  cassert.assert_type = CHAR_NUMBER_EQ;
-  cassert.value1 = &c;
-  cassert.value2 = &number;
-  cassert.result = c + 48 == number ? 1 : 0;
-  if (cassert.result != 0) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_size_t_min_eq(a)                                               \
+  cassert_type_compare(SIZE_T_MIN_EQ, a, ==, SIZE_MIN);
 
-Cassert cassert_ptr_eq(const void *a, const void *b) {
-  Cassert cassert = {0};
-  cassert.assert_type = PTR_EQ;
-  cassert.value1 = a;
-  cassert.value2 = b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int8_t_max_eq(a)                                               \
+  cassert_type_compare(INT8_T_MAX_EQ, a, ==, INT8_MAX);
 
-Cassert cassert_size_t_max_eq(const size_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = SIZE_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == SIZE_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int8_t_min_eq(a)                                               \
+  cassert_type_compare(INT8_T_MIN_EQ, a, ==, INT8_MIN);
 
-Cassert cassert_size_t_min_eq(const size_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = SIZE_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == SIZE_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint8_t_max_eq(a)                                              \
+  cassert_type_compare(UINT8_T_MAX_EQ, a, ==, UINT8_MAX);
 
-Cassert cassert_int8_t_max_eq(const int8_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT8_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT8_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint8_t_min_eq(a)                                              \
+  cassert_type_compare(UINT8_T_MIN_EQ, a, ==, UINT8_MIN);
 
-Cassert cassert_int8_t_min_eq(const int8_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT8_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT8_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int16_t_max_eq(a)                                              \
+  cassert_type_compare(INT16_T_MAX_EQ, a, ==, INT16_MAX);
 
-Cassert cassert_uint8_t_max_eq(const uint8_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT8_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT8_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int16_t_min_eq(a)                                              \
+  cassert_type_compare(INT16_T_MIN_EQ, a, ==, INT16_MIN);
 
-Cassert cassert_uint8_t_min_eq(const uint8_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT8_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT8_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint16_t_max_eq(a)                                             \
+  cassert_type_compare(UINT16_T_MAX_EQ, a, ==, UINT16_MAX);
 
-Cassert cassert_int16_t_max_eq(const int16_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT16_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT16_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint16_t_min_eq(a)                                             \
+  cassert_type_compare(UINT16_T_MIN_EQ, a, ==, UINT16_MIN);
 
-Cassert cassert_int16_t_min_eq(const int16_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT16_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT16_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int32_t_max_eq(a)                                              \
+  cassert_type_compare(INT32_T_MAX_EQ, a, ==, INT32_MAX);
 
-Cassert cassert_uint16_t_max_eq(const uint16_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT16_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT16_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int32_t_min_eq(a)                                              \
+  cassert_type_compare(INT32_T_MIN_EQ, a, ==, INT32_MIN);
 
-Cassert cassert_uint16_t_min_eq(const uint16_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT16_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT16_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint32_t_max_eq(a)                                             \
+  cassert_type_compare(UINT32_T_MAX_EQ, a, ==, UINT32_MAX);
 
-Cassert cassert_int32_t_max_eq(const int32_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT32_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT32_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint32_t_min_eq(a)                                             \
+  cassert_type_compare(UINT32_T_MIN_EQ, a, ==, UINT32_MIN);
 
-Cassert cassert_int32_t_min_eq(const int32_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT32_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT32_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int64_t_max_eq(a)                                              \
+  cassert_type_compare(INT64_T_MAX_EQ, a, ==, INT64_MAX);
 
-Cassert cassert_uint32_t_max_eq(const uint32_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT32_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT32_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int64_t_min_eq(a)                                              \
+  cassert_type_compare(INT64_T_MIN_EQ, a, ==, INT64_MIN);
 
-Cassert cassert_uint32_t_min_eq(const uint32_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT32_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT32_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint64_t_max_eq(a)                                             \
+  cassert_type_compare(UINT64_T_MAX_EQ, a, ==, UINT64_MAX);
 
-Cassert cassert_int64_t_max_eq(const int64_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT64_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT64_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint64_t_min_eq(a)                                             \
+  cassert_type_compare(UINT64_T_MIN_EQ, a, ==, UINT64_MIN);
 
-Cassert cassert_int64_t_min_eq(const int64_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT64_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT64_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_char_max_eq(a)                                                 \
+  cassert_type_compare(CHAR_MAX_EQ, a, ==, CHAR_MAX);
 
-Cassert cassert_uint64_t_max_eq(const uint64_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT64_T_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT64_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uchar_max_eq(a)                                                \
+  cassert_type_compare(UCHAR_MAX_EQ, a, ==, UCHAR_MAX);
 
-Cassert cassert_uint64_t_min_eq(const uint64_t a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT64_T_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT64_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_short_max_eq(a)                                                \
+  cassert_type_compare(SHORT_MAX_EQ, a, ==, SHRT_MAX);
 
-Cassert cassert_char_max_eq(const char a) {
-  Cassert cassert = {0};
-  cassert.assert_type = CHAR_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == CHAR_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ushort_max_eq(a)                                               \
+  cassert_type_compare(USHORT_MAX_EQ, a, ==, USHRT_MAX);
 
-Cassert cassert_uchar_max_eq(const unsigned char a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UCHAR_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UCHAR_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int_max_eq(a) cassert_type_compare(INT_MAX_EQ, a, ==, INT_MAX);
 
-Cassert cassert_short_max_eq(const short a) {
-  Cassert cassert = {0};
-  cassert.assert_type = SHORT_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == SHRT_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_unit_max_eq(a)                                                 \
+  cassert_type_compare(UINT_MAX_EQ, a, ==, UINT_MAX);
 
-Cassert cassert_ushort_max_eq(const unsigned short a) {
-  Cassert cassert = {0};
-  cassert.assert_type = USHORT_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == USHRT_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_max_eq(a)                                                 \
+  cassert_type_compare(LONG_MAX_EQ, a, ==, LONG_MAX);
 
-Cassert cassert_int_max_eq(const int a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_max_eq(a)                                                \
+  cassert_type_compare(ULONG_MAX_EQ, a, ==, ULONG_MAX);
 
-Cassert cassert_unit_max_eq(const unsigned int a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_long_max_eq(a)                                            \
+  cassert_type_compare(LONG_LONG_MAX_EQ, a, ==, LLONG_MAX);
 
-Cassert cassert_long_max_eq(const long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == LONG_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_long_max_eq(a)                                           \
+  cassert_type_compare(ULONG_LONG_MAX_EQ, a, ==, ULLONG_MAX);
 
-Cassert cassert_ulong_max_eq(const unsigned long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == ULONG_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_char_min_eq(a)                                                 \
+  cassert_type_compare(CHAR_MIN_EQ, a, ==, CHAR_MIN);
 
-Cassert cassert_long_long_max_eq(const long long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_LONG_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == LLONG_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uchar_min_eq(a)                                                \
+  cassert_type_compare(UCHAR_MIN_EQ, a, ==, UCHAR_MIN);
 
-Cassert cassert_ulong_long_max_eq(const unsigned long long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_LONG_MAX_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == ULLONG_MAX ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_short_min_eq(a)                                                \
+  cassert_type_compare(SHORT_MIN_EQ, a, ==, SHRT_MIN);
 
-Cassert cassert_char_min_eq(const char a) {
-  Cassert cassert = {0};
-  cassert.assert_type = CHAR_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == CHAR_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ushort_min_eq(a)                                               \
+  cassert_type_compare(USHORT_MIN_EQ, a, ==, USHRT_MIN);
 
-Cassert cassert_uchar_min_eq(const unsigned char a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UCHAR_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UCHAR_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int_min_eq(a) cassert_type_compare(INT_MIN_EQ, a, ==, INT_MIN);
 
-Cassert cassert_short_min_eq(const short a) {
-  Cassert cassert = {0};
-  cassert.assert_type = SHORT_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == SHRT_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_unit_min_eq(a)                                                 \
+  cassert_type_compare(UINT_MIN_EQ, a, ==, UINT_MIN);
 
-Cassert cassert_ushort_min_eq(const unsigned short a) {
-  Cassert cassert = {0};
-  cassert.assert_type = USHORT_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == USHRT_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_min_eq(a)                                                 \
+  cassert_type_compare(LONG_MIN_EQ, a, ==, LONG_MIN);
 
-Cassert cassert_int_min_eq(const int a) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == INT_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_min_eq(a)                                                \
+  cassert_type_compare(ULONG_MIN_EQ, a, ==, ULONG_MIN);
 
-Cassert cassert_unit_min_eq(const unsigned int a) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == UINT_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_long_min_eq(a)                                            \
+  cassert_type_compare(LONG_LONG_MIN_EQ, a, ==, LLONG_MIN);
 
-Cassert cassert_long_min_eq(const long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == LONG_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_long_min_eq(a)                                           \
+  cassert_type_compare(ULONG_LONG_MIN_EQ, a, ==, ULLONG_MIN);
 
-Cassert cassert_ulong_min_eq(const unsigned long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == ULONG_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_char_eq(a, b) cassert_type_compare(CHAR_EQ, a, ==, b);
 
-Cassert cassert_long_long_min_eq(const long long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_LONG_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == LLONG_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uchar_eq(a, b) cassert_type_compare(UCHAR_EQ, a, ==, b);
 
-Cassert cassert_ulong_long_min_eq(const unsigned long long a) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_LONG_MIN_EQ;
-  cassert.value1 = &a;
-  cassert.result = a == ULLONG_MIN ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_short_eq(a, b) cassert_type_compare(SHORT_EQ, a, ==, b);
 
-Cassert cassert_char_eq(const char a, const char b) {
-  Cassert cassert = {0};
-  cassert.assert_type = CHAR_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (cassert.result != 0) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ushort_eq(a, b) cassert_type_compare(USHORT_EQ, a, ==, b);
 
-Cassert cassert_uchar_eq(const unsigned char a, const unsigned char b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UCHAR_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (cassert.result != 0) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int_eq(a, b) cassert_type_compare(INT_EQ, a, ==, b);
 
-Cassert cassert_short_eq(const short a, const short b) {
-  Cassert cassert = {0};
-  cassert.assert_type = SHORT_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_uint_eq(a, b) cassert_type_compare(UINT_EQ, a, ==, b);
 
-Cassert cassert_int_eq(const int a, const int b) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_eq(a, b) cassert_type_compare(LONG_EQ, a, ==, b);
 
-Cassert cassert_long_eq(const long a, const long b) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_eq(a, b) cassert_type_compare(ULONG_EQ, a, ==, b);
 
-Cassert cassert_long_long_eq(const long long a, const long long b) {
-  Cassert cassert = {0};
-  cassert.assert_type = LONG_LONG_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_long_long_eq(a, b) cassert_type_compare(LONG_LONG_EQ, a, ==, b);
 
-Cassert cassert_ushort_eq(const unsigned short a, const unsigned short b) {
-  Cassert cassert = {0};
-  cassert.assert_type = USHORT_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_ulong_long_eq(a, b)                                            \
+  cassert_type_compare(ULONG_LONG_EQ, a, ==, b);
 
-Cassert cassert_uint_eq(const unsigned int a, const unsigned int b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_float_eq(a, b) cassert_type_float_compare(FLOAT_EQ, a, ==, b);
 
-Cassert cassert_ulong_eq(const unsigned long a, const unsigned long b) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_double_eq(a, b)                                                \
+  cassert_type_double_compare(DOUBLE_EQ, a, ==, b);
 
-Cassert cassert_ulong_long_eq(const unsigned long long a,
-                              const unsigned long long b) {
-  Cassert cassert = {0};
-  cassert.assert_type = ULONG_LONG_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_size_t_eq(a, b) cassert_type_compare(SIZE_T_EQ, a, ==, b);
 
-Cassert cassert_size_t_eq(const size_t a, const size_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = SIZE_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_int8_t_eq(const int8_t a, const int8_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT8_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_int16_t_eq(const int16_t a, const int16_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT16_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_int32_t_eq(const int32_t a, const int32_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT32_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_int64_t_eq(const int64_t a, const int64_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = INT64_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_uint8_t_eq(const uint8_t a, const uint8_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT8_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_uint16_t_eq(const uint16_t a, const uint16_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT16_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_uint32_t_eq(const uint32_t a, const uint32_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT32_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_uint64_t_eq(const uint64_t a, const uint64_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = UINT64_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_float_t_eq(const float_t a, const float_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = FLOAT_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
-Cassert cassert_double_t_eq(const double_t a, const double_t b) {
-  Cassert cassert = {0};
-  cassert.assert_type = DOUBLE_T_EQ;
-  cassert.value1 = &a;
-  cassert.value2 = &b;
-  cassert.result = a == b ? 1 : 0;
-  if (!cassert.result) {
-    cassert.failed = true;
-  }
-  return cassert;
-}
+#define cassert_int8_t_eq(a, b) cassert_type_compare(INT8_T_EQ, a, ==, b);
+
+#define cassert_int16_t_eq(a, b) cassert_type_compare(INT16_T_EQ, a, ==, b);
+
+#define cassert_int32_t_eq(a, b) cassert_type_compare(INT32_T_EQ, a, ==, b);
+
+#define cassert_int64_t_eq(a, b) cassert_type_compare(INT64_T_EQ, a, ==, b);
+
+#define cassert_Uint8_t_eq(a, b) cassert_type_compare(UINT8_T_EQ, a, ==, b);
+
+#define cassert_uint16_t_eq(a, b) cassert_type_compare(UINT16_T_EQ, a, ==, b);
+
+#define cassert_uint32_t_eq(a, b) cassert_type_compare(UINT32_T_EQ, a, ==, b);
+
+#define cassert_uint64_t_eq(a, b) cassert_type_compare(UINT64_T_EQ, a, ==, b);
+
+#define cassert_float_t_eq(a, b)                                               \
+  cassert_type_float_compare(FLOAT_T_EQ, a, ==, b);
+
+#define cassert_double_t_eq(a, b)                                              \
+  cassert_type_double_compare(DOUBLE_T_EQ, a, ==, b);
 
 const char *cassert_str_assert_type(Assert_Type assert_type) {
-  static_assert(ASSERT_TYPE_COUNT == 66, "assert types count has changed");
+  static_assert(ASSERT_TYPE_COUNT == 70, "assert types count has changed");
   switch (assert_type) {
   case STRING_EQ:
     return "STRING_EQ";
-  case STRING_NUMBER_EQ:
-    return "STRING_NUMBER_EQ";
+  case STRING_INT64_EQ:
+    return "STRING_INT64_EQ";
+  case STRING_FLOAT_EQ:
+    return "STRING_FLOAT_EQ";
+  case STRING_DOUBLE_EQ:
+    return "STRING_DOUBLE_EQ";
   case CHAR_NUMBER_EQ:
     return "CHAR_NUMBER_EQ";
   case PTR_EQ:
@@ -1058,6 +584,10 @@ const char *cassert_str_assert_type(Assert_Type assert_type) {
     return "UINT32_T_EQ";
   case UINT64_T_EQ:
     return "UINT64_T_EQ";
+  case FLOAT_EQ:
+    return "FLOAT_EQ";
+  case DOUBLE_EQ:
+    return "DOUBLE_EQ";
   case FLOAT_T_EQ:
     return "FLOAT_T_EQ";
   case DOUBLE_T_EQ:
@@ -1146,24 +676,78 @@ const char *cassert_str_assert_type(Assert_Type assert_type) {
   }
 }
 
+int cassert_fprintf(FILE *stream, const char *status, const char *fmt, ...) {
+  DA_CHARPTR c = {0};
+  if (status != NULL) {
+    cassert_dap(&c, '[');
+    if (strncmp(status, "OK", 2) == 0) {
+      cassert_dap(&c, ' ');
+      cassert_dapc(&c, status, strlen(status));
+      cassert_dap(&c, ' ');
+    } else {
+      cassert_dapc(&c, status, strlen(status));
+    }
+    cassert_dap(&c, ']');
+    cassert_dap(&c, ' ');
+  }
+  cassert_dapc(&c, fmt, strlen(fmt));
+  cassert_dap(&c, '\n');
+  cassert_dap(&c, 0);
+
+  va_list args;
+  va_start(args, fmt);
+  int ret = vfprintf(stream, c.elements, args);
+  va_end(args);
+  free(c.elements);
+  return ret;
+}
+const char *booltostr(bool value) { return value ? "OK" : "FAIL"; }
+
+#define LOC_FMT " %s:%d"
+#define LOC_ARG(arg) (arg).file, (arg).line
+
 int cassert_print(Cassert cassert) {
   switch (cassert.assert_type) {
+  case ANY_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%p:%s:%p ->" LOC_FMT, cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           cassert.value2, LOC_ARG(cassert));
   case STRING_EQ:
-    return fprintf(stderr, "%s:%s:%s\n", (char *)cassert.value1,
-                   cassert_str_assert_type(cassert.assert_type),
-                   (char *)cassert.value2);
-  case STRING_NUMBER_EQ:
-    return fprintf(stderr, "%s:%s:%lf\n", (char *)cassert.value1,
-                   cassert_str_assert_type(cassert.assert_type),
-                   *(double_t *)cassert.value2);
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%s:%s:%s ->" LOC_FMT, (char *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           (char *)cassert.value2, LOC_ARG(cassert));
+  case FLOAT_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%f:%s:%f ->" LOC_FMT, *((float *)cassert.value1),
+                           cassert_str_assert_type(cassert.assert_type),
+                           *((float_t *)cassert.value2), LOC_ARG(cassert));
+  case STRING_INT64_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%s:%s:%ld ->" LOC_FMT, (char *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           *(int64_t *)cassert.value2, LOC_ARG(cassert));
+  case STRING_FLOAT_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%s:%s:%f ->" LOC_FMT, (char *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           *(float_t *)cassert.value2, LOC_ARG(cassert));
+  case STRING_DOUBLE_EQ:
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%s:%s:%lf ->" LOC_FMT, (char *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           *(double_t *)cassert.value2, LOC_ARG(cassert));
   case PTR_EQ:
-    return fprintf(stderr, "%p:%s:%p\n", (uintptr_t *)cassert.value1,
-                   cassert_str_assert_type(cassert.assert_type),
-                   (uintptr_t *)cassert.value2);
+    return cassert_fprintf(stderr, booltostr(!cassert.failed),
+                           "%p:%s:%p ->" LOC_FMT, (uintptr_t *)cassert.value1,
+                           cassert_str_assert_type(cassert.assert_type),
+                           (uintptr_t *)cassert.value2, LOC_ARG(cassert));
   case UNKNOWN_EQ:
   default:
-    return fprintf(stderr, "%s \n",
-                   cassert_str_assert_type(cassert.assert_type));
+    return cassert_fprintf(stderr, booltostr(!cassert.failed), "%s ->" LOC_FMT,
+                           cassert_str_assert_type(cassert.assert_type),
+                           LOC_ARG(cassert));
   }
 }
 
@@ -1209,6 +793,34 @@ int cassert_print_all_success_cases(Casserts *casserts) {
     }
   }
   return result;
+}
+
+void cassert_free_case_value_mem(Cassert *cassert) {
+  switch (cassert->assert_type) {
+  case DOUBLE_EQ:
+  case DOUBLE_T_EQ:
+  case FLOAT_EQ:
+  case FLOAT_T_EQ: {
+    if (cassert->value1) {
+      free(cassert->value1);
+    }
+  } break;
+  case STRING_INT64_EQ:
+  case STRING_FLOAT_EQ:
+  case STRING_DOUBLE_EQ: {
+    if (cassert->value2) {
+      free(cassert->value2);
+    }
+  } break;
+  default:
+    break;
+  }
+}
+
+void cassert_array_free_case_value_mem(Casserts *casserts) {
+  for (size_t i = 0; i < casserts->count; ++i) {
+    cassert_free_case_value_mem(&casserts->elements[i]);
+  }
 }
 
 #endif // CASSERT_IMPLEMENTATION
