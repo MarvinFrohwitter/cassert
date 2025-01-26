@@ -354,16 +354,6 @@ enum { _float, _double, _int64 };
     cassert_dap(casserts, cassert);                                            \
   } while (0)
 
-#endif // CASSERT_H_
-
-// ===========================================================================
-
-#ifdef CASSERT_IMPLEMENTATION
-
-#include <stdio.h>
-#include <string.h>
-
-int cassert_min(int a, int b) { return a < b ? a : b; }
 
 #define cassert_ptr_eq(a, b) cassert_type_compare(PTR_EQ, a, ==, b);
 
@@ -528,6 +518,17 @@ int cassert_min(int a, int b) { return a < b ? a : b; }
 
 #define cassert_double_t_eq(a, b)                                              \
   cassert_type_double_compare(DOUBLE_T_EQ, a, ==, b);
+
+#endif // CASSERT_H_
+
+// ===========================================================================
+
+#ifdef CASSERT_IMPLEMENTATION
+
+#include <stdio.h>
+#include <string.h>
+
+int cassert_min(int a, int b) { return a < b ? a : b; }
 
 const char *cassert_str_assert_type(Assert_Type assert_type) {
   static_assert(ASSERT_TYPE_COUNT == 70, "assert types count has changed");
