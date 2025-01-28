@@ -27,7 +27,8 @@ int main(int argc, char *argv[]) {
     cassert_dap(&tests, test2());
   }
 
-  cassert_print_tests(&tests);
+  cassert_short_print_tests(&tests);
+  // cassert_print_tests(&tests);
   cassert_free_tests(&tests);
   return 0;
 }

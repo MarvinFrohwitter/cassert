@@ -245,6 +245,8 @@ int cassert_print_success_case(Cassert cassert);
 int cassert_print_all_cases(Test *test);
 int cassert_print_all_failure_cases(Test *test);
 int cassert_print_all_success_cases(Test *test);
+void cassert_short_print_test(Test *test);
+void cassert_short_print_tests(Tests *tests);
 void cassert_print_test(Test *test);
 void cassert_print_tests(Tests *tests);
 
@@ -826,6 +828,7 @@ int cassert_print_all_success_cases(Test *test) {
 }
 
 void cassert_print_test(Test *test) {
+  fprintf(stderr, "--------------------------------------------------------\n");
   if (isatty(STDERR_FILENO)) {
     cassert_fprintf(stderr, TERM_NAME, "%s", test->name);
     cassert_fprintf(stderr, TERM_AMOUNT, "%zu", test->count);
@@ -834,6 +837,39 @@ void cassert_print_test(Test *test) {
     cassert_fprintf(stderr, AMOUNT, "%zu", test->count);
   }
   cassert_print_all_cases(test);
+}
+
+void cassert_short_print_test(Test *test) {
+  int failed = 0;
+  for (size_t i = 0; i < test->count; ++i) {
+    if (test->elements[i].failed) {
+      failed++;
+    }
+  }
+  if (failed) {
+    if (isatty(STDERR_FILENO)) {
+      cassert_fprintf(stderr, TERM_FAIL, "[" TERM_AMOUNT " %d:%zu] %s", failed,
+                      test->count, test->name);
+    } else {
+      cassert_fprintf(stderr, FAIL, "[" AMOUNT " %d:%zu] %s", failed,
+                      test->count, test->name);
+    }
+    return;
+  }
+  if (isatty(STDERR_FILENO)) {
+    cassert_fprintf(stderr, TERM_OK, "[" TERM_AMOUNT " %zu:%zu] %s",
+                    test->count, test->count, test->name);
+    return;
+  } else {
+    cassert_fprintf(stderr, OK, "[" AMOUNT " %zu:%zu] %s", test->count,
+                    test->count, test->name);
+  }
+}
+
+void cassert_short_print_tests(Tests *tests) {
+  for (size_t i = 0; i < tests->count; ++i) {
+    cassert_short_print_test(&tests->elements[i]);
+  }
 }
 
 void cassert_print_tests(Tests *tests) {
