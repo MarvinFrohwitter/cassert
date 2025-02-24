@@ -1,9 +1,9 @@
+#define PRINT_OPERATION_AND_DESCRIPTION
 #define CASSERT_IMPLEMENTATION
 #include "cassert.h"
 
 Test test1() {
-  Test test = {0};
-  test.name = "Test1";
+  Test test = cassert_init_test("Test1");
 
   const char *a = __FILE__;
   const char *c = a;
@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
     cassert_dap(&tests, test2());
   }
 
-  cassert_short_print_tests(&tests);
-  // cassert_print_tests(&tests);
+  // cassert_short_print_tests(&tests);
+  cassert_print_tests(&tests);
   cassert_free_tests(&tests);
   return 0;
 }
