@@ -8,6 +8,7 @@ Test test1() {
   const char *a = __FILE__;
   const char *c = a;
   cassert_ptr_eq(a, c);
+  cassert_char_number_eq('S', 83);
   return test;
 }
 
@@ -21,7 +22,7 @@ Test test2() {
   return test;
 }
 
-int main(int argc, char *argv[]) {
+int main() {
   cassert_tests {
     cassert_dap(&tests, test1());
     cassert_dap(&tests, test2());
