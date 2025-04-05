@@ -15,10 +15,11 @@ Test test1() {
 }
 
 Test test2() {
-  Test test = cassert_init_test("Test1");
+  Test test = cassert_init_test("Test2");
 
   const char *a = __FILE__;
   cassert_ptr_neq(a, NULL);
+  cassert_set_last_cassert_description( &test, "The file is not NULL");
   return test;
 }
 
