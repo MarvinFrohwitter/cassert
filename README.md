@@ -19,7 +19,7 @@ Test test2() {
 
   const char *a = __FILE__;
   cassert_ptr_neq(a, NULL);
-  cassert_set_last_cassert_description( &test, "The file is not NULL");
+  cassert_set_last_cassert_description(&test, "The file is not NULL");
   return test;
 }
 
