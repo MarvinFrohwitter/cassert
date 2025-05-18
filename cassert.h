@@ -539,6 +539,11 @@ static inline bool double_equals(double x, double y) {
   cassert_type_compare(CHAR_NUMBER_NEQ, c, !=, number);
 
 enum { _float, _double, _int64 };
+
+#define cassert_string_number_eq(string, number)                               \
+  cassert_type_string_number_eq(string, number, _int64)
+#define cassert_string_int_eq(string, number)                                  \
+  cassert_type_string_number_eq(string, number, _int64)
 #define cassert_string_int64_eq(string, number)                                \
   cassert_type_string_number_eq(string, number, _int64)
 #define cassert_string_float_eq(string, number)                                \
@@ -546,11 +551,38 @@ enum { _float, _double, _int64 };
 #define cassert_string_double_eq(string, number)                               \
   cassert_type_string_number_eq(string, number, _double)
 
+#define cassert_string_number_neq(string, number)                              \
+  cassert_type_string_number_neq(string, number, _int64)
+#define cassert_string_int_neq(string, number)                                 \
+  cassert_type_string_number_neq(string, number, _int64)
 #define cassert_string_int64_neq(string, number)                               \
   cassert_type_string_number_neq(string, number, _int64)
 #define cassert_string_float_neq(string, number)                               \
   cassert_type_string_number_neq(string, number, _float)
 #define cassert_string_double_neq(string, number)                              \
+  cassert_type_string_number_neq(string, number, _double)
+
+// Reverse order
+#define cassert_number_string_eq(number, string)                               \
+  cassert_type_string_number_eq(string, number, _int64)
+#define cassert_int_string_eq(number, string)                                  \
+  cassert_type_string_number_eq(string, number, _int64)
+#define cassert_int64_string_eq(number, string)                                \
+  cassert_type_string_number_eq(string, number, _int64)
+#define cassert_float_string_eq(number, string)                                \
+  cassert_type_string_number_eq(string, number, _float)
+#define cassert_double_string_eq(number, string)                               \
+  cassert_type_string_number_eq(string, number, _double)
+
+#define cassert_number_string_neq(number, string)                              \
+  cassert_type_string_number_neq(string, number, _int64)
+#define cassert_int_string_neq(number, string)                                 \
+  cassert_type_string_number_neq(string, number, _int64)
+#define cassert_int64_string_neq(number, string)                               \
+  cassert_type_string_number_neq(string, number, _int64)
+#define cassert_float_string_neq(number, string)                               \
+  cassert_type_string_number_neq(string, number, _float)
+#define cassert_double_string_neq(number, string)                              \
   cassert_type_string_number_neq(string, number, _double)
 
 #define cassert_type_string_number_eq(string, number, type)                    \
