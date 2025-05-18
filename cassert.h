@@ -1453,7 +1453,7 @@ int cassert_print_internal(FILE *stream, Cassert cassert, int len_assert_type) {
                        cassert.value2 ? "TRUE" : "FALSE");
   case STRING_EQ:
   case STRING_NEQ:
-    cassert_print_fmtf("%s", "%s", (char *)cassert.value1,
+    cassert_print_fmtf("\"%s\"", "\"%s\"", (char *)cassert.value1,
                        (char *)cassert.value2);
   case FLOAT_EQ:
   case FLOAT_NEQ:
@@ -1465,15 +1465,15 @@ int cassert_print_internal(FILE *stream, Cassert cassert, int len_assert_type) {
                        *(double *)cassert.value2);
   case STRING_INT64_EQ:
   case STRING_INT64_NEQ:
-    cassert_print_fmtf("%s", "%ld", (char *)cassert.value1,
+    cassert_print_fmtf("\"%s\"", "%ld", (char *)cassert.value1,
                        *(int64_t *)cassert.value2);
   case STRING_FLOAT_EQ:
   case STRING_FLOAT_NEQ:
-    cassert_print_fmtf("%s", "%f", (char *)cassert.value1,
+    cassert_print_fmtf("\"%s\"", "%f", (char *)cassert.value1,
                        *(float *)cassert.value2);
   case STRING_DOUBLE_EQ:
   case STRING_DOUBLE_NEQ:
-    cassert_print_fmtf("%s", "%lf", (char *)cassert.value1,
+    cassert_print_fmtf("\"%s\"", "%lf", (char *)cassert.value1,
                        *(double *)cassert.value2);
   case PTR_EQ:
   case PTR_NEQ:
