@@ -1379,6 +1379,7 @@ int print_operation_and_description(Cassert cassert) {
   }
   size_t buffer_size = len + 2 * space + 2 * dash + nullterminator;
   size_t byte_size = sizeof(char) * buffer_size;
+  assert(byte_size < INT_MAX && "ERROR: description string is to large!");
   char *desc_buf = malloc(byte_size);
   if (desc_buf == NULL) {
     assert(0 && "OUT OF MEMORY");
@@ -1394,6 +1395,7 @@ int print_operation_and_description(Cassert cassert) {
   }
   buffer_size = len + nullterminator;
   byte_size = sizeof(char) * buffer_size;
+  assert(byte_size < INT_MAX && "ERROR: operation string is to large!");
   char *operation_buf = malloc(byte_size);
   if (operation_buf == NULL) {
     assert(0 && "OUT OF MEMORY");
