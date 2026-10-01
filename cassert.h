@@ -344,19 +344,21 @@ void cassert_print_tests(Tests *tests);
 
 #define cassert_type_compare_function_ex_param(type, a, b, compare_function, cf_ex, param)                             \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.line = __LINE__;                                                                                       \
         cassert.file = __FILE__;                                                                                       \
         cassert.assert_type = type;                                                                                    \
-        cassert.value1 = malloc(sizeof(typeof((a))));                                                                  \
+        cassert.value1 = malloc(sizeof(typeof((aa))));                                                                 \
         assert(cassert.value1 != NULL);                                                                                \
-        cassert.value2 = malloc(sizeof(typeof((b))));                                                                  \
+        cassert.value2 = malloc(sizeof(typeof((bb))));                                                                 \
         assert(cassert.value2 != NULL);                                                                                \
-        *(typeof((a)) *) cassert.value1 = (a);                                                                         \
-        *(typeof((b)) *) cassert.value2 = (b);                                                                         \
+        *(typeof((aa)) *) cassert.value1 = (aa);                                                                       \
+        *(typeof((bb)) *) cassert.value2 = (bb);                                                                       \
         cassert.comparison = #cf_ex;                                                                                   \
         cassert.operation_str = #a " " #cf_ex " " #b;                                                                  \
-        cassert.result = compare_function((a), cf_ex, (b), (param));                                                   \
+        cassert.result = compare_function((aa), cf_ex, (bb), (param));                                                 \
         if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -365,19 +367,21 @@ void cassert_print_tests(Tests *tests);
 
 #define cassert_type_compare_function_ex(type, a, b, compare_function, cf_ex)                                          \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.line = __LINE__;                                                                                       \
         cassert.file = __FILE__;                                                                                       \
         cassert.assert_type = type;                                                                                    \
-        cassert.value1 = malloc(sizeof(typeof((a))));                                                                  \
+        cassert.value1 = malloc(sizeof(typeof((aa))));                                                                 \
         assert(cassert.value1 != NULL);                                                                                \
-        cassert.value2 = malloc(sizeof(typeof((b))));                                                                  \
+        cassert.value2 = malloc(sizeof(typeof((bb))));                                                                 \
         assert(cassert.value2 != NULL);                                                                                \
-        *(typeof((a)) *) cassert.value1 = (a);                                                                         \
-        *(typeof((b)) *) cassert.value2 = (b);                                                                         \
+        *(typeof((aa)) *) cassert.value1 = (aa);                                                                       \
+        *(typeof((bb)) *) cassert.value2 = (bb);                                                                       \
         cassert.comparison = #cf_ex;                                                                                   \
         cassert.operation_str = #a " " #cf_ex " " #b;                                                                  \
-        cassert.result = compare_function((a), cf_ex, (b));                                                            \
+        cassert.result = compare_function((aa), cf_ex, (bb));                                                          \
         if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -386,19 +390,21 @@ void cassert_print_tests(Tests *tests);
 
 #define cassert_type_compare_function_param(type, a, b, compare_function, param)                                       \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.line = __LINE__;                                                                                       \
         cassert.file = __FILE__;                                                                                       \
         cassert.assert_type = type;                                                                                    \
-        cassert.value1 = malloc(sizeof(typeof((a))));                                                                  \
+        cassert.value1 = malloc(sizeof(typeof((aa))));                                                                 \
         assert(cassert.value1 != NULL);                                                                                \
-        cassert.value2 = malloc(sizeof(typeof((b))));                                                                  \
+        cassert.value2 = malloc(sizeof(typeof((bb))));                                                                 \
         assert(cassert.value2 != NULL);                                                                                \
-        *(typeof((a)) *) cassert.value1 = (a);                                                                         \
-        *(typeof((b)) *) cassert.value2 = (b);                                                                         \
+        *(typeof((aa)) *) cassert.value1 = (aa);                                                                       \
+        *(typeof((bb)) *) cassert.value2 = (bb);                                                                       \
         cassert.comparison = #compare_function;                                                                        \
         cassert.operation_str = #a " " #compare_function " " #b;                                                       \
-        cassert.result = compare_function((a), (b), (param));                                                          \
+        cassert.result = compare_function((aa), (bb), (param));                                                        \
         if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -407,19 +413,21 @@ void cassert_print_tests(Tests *tests);
 
 #define cassert_type_compare_function(type, a, b, compare_function)                                                    \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.line = __LINE__;                                                                                       \
         cassert.file = __FILE__;                                                                                       \
         cassert.assert_type = type;                                                                                    \
-        cassert.value1 = malloc(sizeof(typeof((a))));                                                                  \
+        cassert.value1 = malloc(sizeof(typeof((aa))));                                                                 \
         assert(cassert.value1 != NULL);                                                                                \
-        cassert.value2 = malloc(sizeof(typeof((b))));                                                                  \
+        cassert.value2 = malloc(sizeof(typeof((bb))));                                                                 \
         assert(cassert.value2 != NULL);                                                                                \
-        *(typeof((a)) *) cassert.value1 = (a);                                                                         \
-        *(typeof((b)) *) cassert.value2 = (b);                                                                         \
+        *(typeof((aa)) *) cassert.value1 = (ba);                                                                       \
+        *(typeof((bb)) *) cassert.value2 = (bb);                                                                       \
         cassert.comparison = #compare_function;                                                                        \
         cassert.operation_str = #a " " #compare_function " " #b;                                                       \
-        cassert.result = compare_function((a), (b));                                                                   \
+        cassert.result = compare_function((aa), (bb));                                                                 \
         if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -428,15 +436,17 @@ void cassert_print_tests(Tests *tests);
 
 #define cassert_type_compare(type, a, compare, b)                                                                      \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.line = __LINE__;                                                                                       \
         cassert.file = __FILE__;                                                                                       \
         cassert.assert_type = type;                                                                                    \
-        cassert.value1 = (void *) (uintptr_t) (a);                                                                     \
-        cassert.value2 = (void *) (uintptr_t) (b);                                                                     \
+        cassert.value1 = (void *) (uintptr_t) (aa);                                                                    \
+        cassert.value2 = (void *) (uintptr_t) (bb);                                                                    \
         cassert.comparison = #compare;                                                                                 \
         cassert.operation_str = #a " " #compare " " #b;                                                                \
-        cassert.result = (a) compare(b) ? 1 : 0;                                                                       \
+        cassert.result = (aa) compare(bb) ? 1 : 0;                                                                     \
         if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -504,17 +514,19 @@ static inline bool double_equals(double x, double y) {
 
 #define cassert_string_eq(a, b)                                                                                        \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.assert_type = STRING_EQ;                                                                               \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) (a);                                                                                 \
-        cassert.value2 = (void *) (b);                                                                                 \
+        cassert.value1 = (void *) (aa);                                                                                \
+        cassert.value2 = (void *) (bb);                                                                                \
         assert(cassert.value1 != NULL);                                                                                \
         assert(cassert.value2 != NULL);                                                                                \
         cassert.comparison = CASSERT_EQ;                                                                               \
         cassert.operation_str = #a " " CASSERT_EQ " " #b;                                                              \
-        cassert.result = strncmp(a, b, cassert_max(strlen(a), strlen(b)));                                             \
+        cassert.result = strncmp(aa, bb, cassert_max(strlen(aa), strlen(bb)));                                         \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -523,17 +535,19 @@ static inline bool double_equals(double x, double y) {
 
 #define cassert_string_neq(a, b)                                                                                       \
     do {                                                                                                               \
+        typeof(a) aa = (a);                                                                                            \
+        typeof(b) bb = (b);                                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.assert_type = STRING_NEQ;                                                                              \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) (a);                                                                                 \
-        cassert.value2 = (void *) (b);                                                                                 \
+        cassert.value1 = (void *) (aa);                                                                                \
+        cassert.value2 = (void *) (bb);                                                                                \
         assert(cassert.value1 != NULL);                                                                                \
         assert(cassert.value2 != NULL);                                                                                \
         cassert.comparison = CASSERT_NEQ;                                                                              \
         cassert.operation_str = #a " " CASSERT_NEQ " " #b;                                                             \
-        cassert.result = !strncmp(a, b, cassert_max(strlen(a), strlen(b)));                                            \
+        cassert.result = !strncmp(aa, bb, cassert_max(strlen(aa), strlen(bb)));                                        \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -555,32 +569,34 @@ enum { _float, _double, _int64 };
 
 #define cassert_type_string_number_eq(string, number, type)                                                            \
     do {                                                                                                               \
+        typeof(string) a_string = (string);                                                                            \
+        typeof(number) b_number = (number);                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) string;                                                                              \
-        cassert.value2 = malloc(sizeof(typeof(number)));                                                               \
+        cassert.value1 = (void *) a_string;                                                                            \
+        cassert.value2 = malloc(sizeof(typeof(b_number)));                                                             \
         assert(cassert.value2 != NULL);                                                                                \
         char number_string[64] = {0};                                                                                  \
         switch (type) {                                                                                                \
         case _int64:                                                                                                   \
-            *(int64_t *) cassert.value2 = (int64_t) (number);                                                          \
+            *(int64_t *) cassert.value2 = (int64_t) (b_number);                                                        \
             cassert.assert_type = STRING_INT64_EQ;                                                                     \
-            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (number)) < 0) {                     \
+            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (b_number)) < 0) {                   \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
         case _float:                                                                                                   \
-            *(float *) cassert.value2 = (float) (number);                                                              \
+            *(float *) cassert.value2 = (float) (b_number);                                                            \
             cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
-            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (number)) < 0) {                        \
+            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (b_number)) < 0) {                      \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
         case _double:                                                                                                  \
-            *(double *) cassert.value2 = (double) (number);                                                            \
+            *(double *) cassert.value2 = (double) (b_number);                                                          \
             cassert.assert_type = STRING_DOUBLE_EQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (number)) < 0) {                      \
+            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (b_number)) < 0) {                    \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
@@ -588,7 +604,7 @@ enum { _float, _double, _int64 };
         }                                                                                                              \
         cassert.comparison = CASSERT_EQ;                                                                               \
         cassert.operation_str = #string " " CASSERT_EQ " " #number;                                                    \
-        cassert.result = strncmp(string, number_string, cassert_max(strlen(string), strlen(number_string)));           \
+        cassert.result = strncmp(a_string, number_string, cassert_max(strlen(a_string), strlen(number_string)));       \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -597,32 +613,34 @@ enum { _float, _double, _int64 };
 
 #define cassert_type_string_number_neq(string, number, type)                                                           \
     do {                                                                                                               \
+        typeof(string) a_string = (string);                                                                            \
+        typeof(number) b_number = (number);                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) string;                                                                              \
-        cassert.value2 = malloc(sizeof(typeof(number)));                                                               \
+        cassert.value1 = (void *) a_string;                                                                            \
+        cassert.value2 = malloc(sizeof(typeof(b_number)));                                                             \
         assert(cassert.value2 != NULL);                                                                                \
         char number_string[64] = {0};                                                                                  \
         switch (type) {                                                                                                \
         case _int64:                                                                                                   \
-            *(int64_t *) cassert.value2 = (int64_t) (number);                                                          \
+            *(int64_t *) cassert.value2 = (int64_t) (b_number);                                                        \
             cassert.assert_type = STRING_INT64_NEQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (number)) < 0) {                     \
+            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (b_number)) < 0) {                   \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
         case _float:                                                                                                   \
-            *(float *) cassert.value2 = (float) (number);                                                              \
+            *(float *) cassert.value2 = (float) (b_number);                                                            \
             cassert.assert_type = STRING_FLOAT_NEQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (number)) < 0) {                        \
+            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (b_number)) < 0) {                      \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
         case _double:                                                                                                  \
-            *(double *) cassert.value2 = (double) (number);                                                            \
+            *(double *) cassert.value2 = (double) (b_number);                                                          \
             cassert.assert_type = STRING_DOUBLE_NEQ;                                                                   \
-            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (number)) < 0) {                      \
+            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (b_number)) < 0) {                    \
                 exit(EXIT_FAILURE);                                                                                    \
             };                                                                                                         \
             break;                                                                                                     \
@@ -630,7 +648,7 @@ enum { _float, _double, _int64 };
         }                                                                                                              \
         cassert.comparison = CASSERT_NEQ;                                                                              \
         cassert.operation_str = #string " " CASSERT_NEQ " " #number;                                                   \
-        cassert.result = !strncmp(string, number_string, cassert_max(strlen(string), strlen(number_string)));          \
+        cassert.result = !strncmp(a_string, number_string, cassert_max(strlen(a_string), strlen(number_string)));      \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -882,14 +900,14 @@ enum { _float, _double, _int64 };
 
 // ---------------------------------------------------------------------------
 // --- epsilon comparison ---
-#define cassert_float_eq_epsilon(a, b) cassert_type_float_compare_epsilon(FLOAT_EQ, a, <=, b, eps);
+#define cassert_float_eq_epsilon(a, b, epsilon) cassert_type_float_compare_epsilon(FLOAT_EQ, a, <=, b, epsilon);
 
-#define cassert_double_eq_epsilon(a, b) cassert_type_double_compare_epsilon(DOUBLE_EQ, a, <=, b, eps);
+#define cassert_double_eq_epsilon(a, b, epsilon) cassert_type_double_compare_epsilon(DOUBLE_EQ, a, <=, b, epsilon);
 
 // --- neq epsilon comparison ---
-#define cassert_float_neq_epsilon(a, b) cassert_type_float_compare_epsilon(FLOAT_NEQ, a, >, b, eps);
+#define cassert_float_neq_epsilon(a, b, epsilon) cassert_type_float_compare_epsilon(FLOAT_NEQ, a, >, b, epsilon);
 
-#define cassert_double_neq_epsilon(a, b) cassert_type_double_compare_epsilon(DOUBLE_NEQ, a, >, b, eps);
+#define cassert_double_neq_epsilon(a, b, epsilon) cassert_type_double_compare_epsilon(DOUBLE_NEQ, a, >, b, epsilon);
 
 #endif  // CASSERT_H_
 
