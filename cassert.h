@@ -514,19 +514,19 @@ static inline bool double_equals(double x, double y) {
 
 #define cassert_string_eq(a, b)                                                                                        \
     do {                                                                                                               \
-        typeof(a) aa = (a);                                                                                            \
-        typeof(b) bb = (b);                                                                                            \
+        typeof(a) *aa = &(a);                                                                                          \
+        typeof(b) *bb = &(b);                                                                                          \
         Cassert cassert = {0};                                                                                         \
         cassert.assert_type = STRING_EQ;                                                                               \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) (aa);                                                                                \
-        cassert.value2 = (void *) (bb);                                                                                \
+        cassert.value1 = (void *) (*aa);                                                                               \
+        cassert.value2 = (void *) (*bb);                                                                               \
         assert(cassert.value1 != NULL);                                                                                \
         assert(cassert.value2 != NULL);                                                                                \
         cassert.comparison = CASSERT_EQ;                                                                               \
         cassert.operation_str = #a " " CASSERT_EQ " " #b;                                                              \
-        cassert.result = strncmp(aa, bb, cassert_max(strlen(aa), strlen(bb)));                                         \
+        cassert.result = strncmp(*aa, *bb, cassert_max(strlen(*aa), strlen(*bb)));                                     \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -535,19 +535,19 @@ static inline bool double_equals(double x, double y) {
 
 #define cassert_string_neq(a, b)                                                                                       \
     do {                                                                                                               \
-        typeof(a) aa = (a);                                                                                            \
-        typeof(b) bb = (b);                                                                                            \
+        typeof(a) *aa = &(a);                                                                                          \
+        typeof(b) *bb = &(b);                                                                                          \
         Cassert cassert = {0};                                                                                         \
         cassert.assert_type = STRING_NEQ;                                                                              \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) (aa);                                                                                \
-        cassert.value2 = (void *) (bb);                                                                                \
+        cassert.value1 = (void *) (*aa);                                                                               \
+        cassert.value2 = (void *) (*bb);                                                                               \
         assert(cassert.value1 != NULL);                                                                                \
         assert(cassert.value2 != NULL);                                                                                \
         cassert.comparison = CASSERT_NEQ;                                                                              \
         cassert.operation_str = #a " " CASSERT_NEQ " " #b;                                                             \
-        cassert.result = !strncmp(aa, bb, cassert_max(strlen(aa), strlen(bb)));                                        \
+        cassert.result = !strncmp(*aa, *bb, cassert_max(strlen(*aa), strlen(*bb)));                                    \
         if (cassert.result != 0) {                                                                                     \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
@@ -569,43 +569,41 @@ enum { _float, _double, _int64 };
 
 #define cassert_type_string_number_eq(string, number, type)                                                            \
     do {                                                                                                               \
-        typeof(string) a_string = (string);                                                                            \
+        typeof(string) *a_string = &(string);                                                                          \
         typeof(number) b_number = (number);                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) a_string;                                                                            \
+        cassert.value1 = (void *) *a_string;                                                                           \
         cassert.value2 = malloc(sizeof(typeof(b_number)));                                                             \
         assert(cassert.value2 != NULL);                                                                                \
-        char number_string[64] = {0};                                                                                  \
-        switch (type) {                                                                                                \
-        case _int64:                                                                                                   \
-            *(int64_t *) cassert.value2 = (int64_t) (b_number);                                                        \
-            cassert.assert_type = STRING_INT64_EQ;                                                                     \
-            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (b_number)) < 0) {                   \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
-        case _float:                                                                                                   \
-            *(float *) cassert.value2 = (float) (b_number);                                                            \
-            cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
-            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (b_number)) < 0) {                      \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
-        case _double:                                                                                                  \
-            *(double *) cassert.value2 = (double) (b_number);                                                          \
-            cassert.assert_type = STRING_DOUBLE_EQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (b_number)) < 0) {                    \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
-        default: exit(EXIT_FAILURE);                                                                                   \
-        }                                                                                                              \
         cassert.comparison = CASSERT_EQ;                                                                               \
         cassert.operation_str = #string " " CASSERT_EQ " " #number;                                                    \
-        cassert.result = strncmp(a_string, number_string, cassert_max(strlen(a_string), strlen(number_string)));       \
-        if (cassert.result != 0) {                                                                                     \
+        switch (type) {                                                                                                \
+        case _int64: {                                                                                                 \
+            *(int64_t *) cassert.value2 = (int64_t) (b_number);                                                        \
+            cassert.assert_type = STRING_INT64_EQ;                                                                     \
+            char *endptr;                                                                                              \
+            int64_t parsed_number = strtoll(*a_string, &endptr, 10);                                                   \
+            cassert.result = parsed_number == (int64_t) (b_number);                                                    \
+        } break;                                                                                                       \
+        case _float: {                                                                                                 \
+            *(float *) cassert.value2 = (float) (b_number);                                                            \
+            cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
+            char *endptr;                                                                                              \
+            float parsed_number = atof(*a_string);                                                                     \
+            cassert.result = parsed_number == (float) (b_number);                                                      \
+        } break;                                                                                                       \
+        case _double: {                                                                                                \
+            *(double *) cassert.value2 = (double) (b_number);                                                          \
+            cassert.assert_type = STRING_DOUBLE_EQ;                                                                    \
+            char *endptr;                                                                                              \
+            double parsed_number = strtod(*a_string, &endptr);                                                         \
+            cassert.result = parsed_number == (double) (b_number);                                                     \
+        } break;                                                                                                       \
+        default: exit(EXIT_FAILURE);                                                                                   \
+        }                                                                                                              \
+        if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
         cassert_dap(&test, cassert);                                                                                   \
@@ -613,43 +611,41 @@ enum { _float, _double, _int64 };
 
 #define cassert_type_string_number_neq(string, number, type)                                                           \
     do {                                                                                                               \
-        typeof(string) a_string = (string);                                                                            \
+        typeof(string) *a_string = &(string);                                                                          \
         typeof(number) b_number = (number);                                                                            \
         Cassert cassert = {0};                                                                                         \
         cassert.file = __FILE__;                                                                                       \
         cassert.line = __LINE__;                                                                                       \
-        cassert.value1 = (void *) a_string;                                                                            \
+        cassert.value1 = (void *) *a_string;                                                                           \
         cassert.value2 = malloc(sizeof(typeof(b_number)));                                                             \
         assert(cassert.value2 != NULL);                                                                                \
-        char number_string[64] = {0};                                                                                  \
+        cassert.comparison = CASSERT_EQ;                                                                               \
+        cassert.operation_str = #string " " CASSERT_EQ " " #number;                                                    \
         switch (type) {                                                                                                \
-        case _int64:                                                                                                   \
+        case _int64: {                                                                                                 \
             *(int64_t *) cassert.value2 = (int64_t) (b_number);                                                        \
-            cassert.assert_type = STRING_INT64_NEQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%ld\n", (int64_t) (b_number)) < 0) {                   \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
-        case _float:                                                                                                   \
+            cassert.assert_type = STRING_INT64_EQ;                                                                     \
+            char *endptr;                                                                                              \
+            int64_t parsed_number = strtoll(*a_string, &endptr, 10);                                                   \
+            cassert.result = parsed_number != (int64_t) (b_number);                                                    \
+        } break;                                                                                                       \
+        case _float: {                                                                                                 \
             *(float *) cassert.value2 = (float) (b_number);                                                            \
-            cassert.assert_type = STRING_FLOAT_NEQ;                                                                    \
-            if (snprintf(number_string, sizeof(number_string), "%f\n", (float) (b_number)) < 0) {                      \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
-        case _double:                                                                                                  \
+            cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
+            char *endptr;                                                                                              \
+            float parsed_number = atof(*a_string);                                                                     \
+            cassert.result = parsed_number != (float) (b_number);                                                      \
+        } break;                                                                                                       \
+        case _double: {                                                                                                \
             *(double *) cassert.value2 = (double) (b_number);                                                          \
-            cassert.assert_type = STRING_DOUBLE_NEQ;                                                                   \
-            if (snprintf(number_string, sizeof(number_string), "%lf\n", (double) (b_number)) < 0) {                    \
-                exit(EXIT_FAILURE);                                                                                    \
-            };                                                                                                         \
-            break;                                                                                                     \
+            cassert.assert_type = STRING_DOUBLE_EQ;                                                                    \
+            char *endptr;                                                                                              \
+            double parsed_number = strtod(*a_string, &endptr);                                                         \
+            cassert.result = parsed_number != (double) (b_number);                                                     \
+        } break;                                                                                                       \
         default: exit(EXIT_FAILURE);                                                                                   \
         }                                                                                                              \
-        cassert.comparison = CASSERT_NEQ;                                                                              \
-        cassert.operation_str = #string " " CASSERT_NEQ " " #number;                                                   \
-        cassert.result = !strncmp(a_string, number_string, cassert_max(strlen(a_string), strlen(number_string)));      \
-        if (cassert.result != 0) {                                                                                     \
+        if (!cassert.result) {                                                                                         \
             cassert.failed = true;                                                                                     \
         }                                                                                                              \
         cassert_dap(&test, cassert);                                                                                   \
