@@ -425,7 +425,7 @@ void cassert_print_tests(Tests *tests);
         assert(cassert.value1 != NULL);                                                                                \
         cassert.value2 = malloc(sizeof(typeof((___bb___))));                                                           \
         assert(cassert.value2 != NULL);                                                                                \
-        *(typeof((___aa___)) *) cassert.value1 = (ba);                                                                 \
+        *(typeof((___aa___)) *) cassert.value1 = (___aa___);                                                           \
         *(typeof((___bb___)) *) cassert.value2 = (___bb___);                                                           \
         cassert.comparison = #compare_function;                                                                        \
         cassert.operation_str = #a " " #compare_function " " #b;                                                       \
@@ -603,7 +603,7 @@ enum { _float, _double, _int64 };
             *(float *) cassert.value2 = (float) (b_number);                                                            \
             cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
             char *endptr;                                                                                              \
-            float parsed_number = atof(*a_string);                                                                     \
+            float parsed_number = strtof(*a_string, &endptr);                                                          \
             cassert.result = parsed_number == (float) (b_number);                                                      \
         } break;                                                                                                       \
         case _double: {                                                                                                \
@@ -645,7 +645,7 @@ enum { _float, _double, _int64 };
             *(float *) cassert.value2 = (float) (b_number);                                                            \
             cassert.assert_type = STRING_FLOAT_EQ;                                                                     \
             char *endptr;                                                                                              \
-            float parsed_number = atof(*a_string);                                                                     \
+            float parsed_number = strtof(*a_string, &endptr);                                                          \
             cassert.result = parsed_number != (float) (b_number);                                                      \
         } break;                                                                                                       \
         case _double: {                                                                                                \

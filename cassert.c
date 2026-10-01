@@ -17,6 +17,7 @@ Test test2() {
     test.name = "Test2";
 
     cassert_string_neq("h", "H");
+    cassert_string_eq("S", "S");
 
     char *five = "5.0000001";
     cassert_string_int64_eq(five, 5.2);
